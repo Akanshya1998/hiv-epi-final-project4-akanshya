@@ -1,0 +1,16 @@
+# R / RStudio
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# renv (if used later)
+renv/library/
+renv/staging/
+renv/.cache/
+.Rprofile
+
+# Outputs (recreated by make)
+output/
+report/*.html
+report/*.md

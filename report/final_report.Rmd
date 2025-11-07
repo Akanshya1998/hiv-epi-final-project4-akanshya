@@ -1,0 +1,96 @@
+---
+title: "HIV Epidemiology – Children & Adolescents"
+author: "Akanshya Dash"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+suppressPackageStartupMessages({
+  library(here)
+  library(readxl)
+  library(readr)
+  library(dplyr)
+  library(ggplot2)
+  library(knitr)
+})
+here::i_am("report/final_report.Rmd")
+```
+
+# Overview
+This brief report presents a summary table of the top 10 countries by adolescent (10–19) HIV incidence in 2020 and a global trend figure.
+
+```{r load-data, include=FALSE}
+xlsx <- here("data","HIV_Epidemiology_Children_Adolescents_2021.xlsx")
+
+# Try to detect correct header row automatically
+df <- readxl::read_excel(
+here::here("data","HIV_Epidemiology_Children_Adolescents_2021.xlsx"),
+skip = 9,
+.name_repair = "minimal"
+)
+# Keep first 5 cols and set names
+
+df <- df[, 1:5, drop = FALSE]
+names(df) <- c("country_region","year","age","indicator","value")
+
+# Coerce types
+
+df <- df |>
+dplyr::mutate(
+year = suppressWarnings(as.integer(year)),
+value = suppressWarnings(readr::parse_number(as.character(value)))
+)
+
+# Filters used below
+
+inc_name <- "Estimated incidence rate (new HIV infection per 1,000 uninfected population)"
+ages <- "Age 10-19"
+```
+
+# Table: Top 10 countries (10–19), 2020
+
+```{r table, echo=FALSE}
+tbl <- df |>
+  filter(age == ages, indicator == inc_name, year == 2020) |>
+  group_by(country_region) |>
+  summarise(incidence_2020 = mean(value, na.rm = TRUE), .groups = "drop") |>
+  arrange(desc(incidence_2020)) |>
+  slice_head(n = 10)
+
+dir.create(here("output","tables"), recursive = TRUE, showWarnings = FALSE)
+readr::write_csv(tbl, here("output","tables","top10_adol_inc_2020.csv"))
+
+kable(tbl, caption = "Top 10 countries by adolescent (10–19) HIV incidence in 2020")
+```
+
+# Figure: Global adolescent HIV incidence (10–19)
+
+```{r figure, echo=FALSE}
+trend <- df |>
+  filter(age == ages, indicator == inc_name) |>
+  group_by(year) |>
+  summarise(incidence = mean(value, na.rm = TRUE), .groups = "drop") |>
+  arrange(year)
+
+dir.create(here("output","figures"), recursive = TRUE, showWarnings = FALSE)
+p <- ggplot(trend, aes(year, incidence)) +
+  geom_line() + geom_point() +
+  labs(
+    title = "Global adolescent HIV incidence (10–19)",
+    x = "Year", y = "Incidence rate (per 1,000 uninfected)"
+  ) +
+  theme_minimal()
+ggsave(here("output","figures","global_adol_inc_trend.png"), p, width = 8, height = 5, dpi = 300)
+
+p
+```
+# Notes
+- **Data source:** HIV_Epidemiology_Children_Adolescents_2021.xlsx  
+- **Indicator:** Estimated incidence rate (new HIV infection per 1,000 uninfected population)  
+- **Age group:** 10–19 years  
+- **Author:** Akanshya Dash  
+- **Date rendered:** `r Sys.Date()`
+
+---
