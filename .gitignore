@@ -1,16 +1,10 @@
-# R / RStudio
-.Rproj.user/
+# Common R junk
+.Rproj.user
 .Rhistory
 .RData
 .Ruserdata
+.DS_Store
 
-# renv (if used later)
-renv/library/
-renv/staging/
-renv/.cache/
-.Rprofile
-
-# Outputs (recreated by make)
-output/
-report/*.html
-report/*.md
+# Allow our outputs and report HTML
+!report/final_report.html
+!output/**
