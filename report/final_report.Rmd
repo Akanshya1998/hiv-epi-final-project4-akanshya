@@ -8,14 +8,12 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(message = FALSE, warning = FALSE)
 suppressPackageStartupMessages({
-  library(here)
-  library(readxl)
-  library(readr)
-  library(dplyr)
-  library(ggplot2)
-  library(knitr)
+  library(here); library(readxl); library(dplyr); library(readr)
+  library(ggplot2); library(knitr)
 })
 here::i_am("report/final_report.Rmd")
+dir.create(here("output","tables"),  recursive = TRUE, showWarnings = FALSE)
+dir.create(here("output","figures"), recursive = TRUE, showWarnings = FALSE)
 ```
 
 # Overview
@@ -23,43 +21,62 @@ This brief report presents a summary table of the top 10 countries by adolescent
 
 ```{r load-data, include=FALSE}
 xlsx <- here("data","HIV_Epidemiology_Children_Adolescents_2021.xlsx")
+inc_name <- "Estimated incidence rate (new HIV infection per 1,000 uninfected population)"
+ages <- "Age 10-19"
 
-# Try to detect correct header row automatically
-df <- readxl::read_excel(
-here::here("data","HIV_Epidemiology_Children_Adolescents_2021.xlsx"),
-skip = 9,
-.name_repair = "minimal"
+looks_ok <- function(x){
+if (!is.data.frame(x) || ncol(x) < 5) return(FALSE)
+nms <- tolower(names(x))
+any(grepl("country|region", nms)) &&
+any(grepl("^year$", nms)) &&
+any(grepl("^age", nms)) &&
+any(grepl("indicator", nms)) &&
+any(grepl("^value", nms))
+}
+
+df <- NULL
+for (sh in readxl::excel_sheets(xlsx)) {
+for (sk in 0:20) {
+tmp <- try(suppressWarnings(read_excel(xlsx, sheet = sh, skip = sk, .name_repair="minimal")), silent=TRUE)
+if (!inherits(tmp,"try-error") && looks_ok(tmp)) { df <- tmp; break }
+}
+if (!is.null(df)) break
+}
+stopifnot(!is.null(df))
+
+# pick the first matching columns by NAME (not index)
+
+nms <- names(df)
+pick <- function(p) which(grepl(p, nms, ignore.case=TRUE))[1]
+cols <- c(
+pick("country|region"),
+pick("^year$"),
+pick("^age"),
+pick("indicator"),
+pick("^value")
 )
-# Keep first 5 cols and set names
-
-df <- df[, 1:5, drop = FALSE]
+df <- df[, cols, drop=FALSE]
 names(df) <- c("country_region","year","age","indicator","value")
 
-# Coerce types
-
 df <- df |>
-dplyr::mutate(
+mutate(
 year = suppressWarnings(as.integer(year)),
 value = suppressWarnings(readr::parse_number(as.character(value)))
 )
-
-# Filters used below
-
-inc_name <- "Estimated incidence rate (new HIV infection per 1,000 uninfected population)"
-ages <- "Age 10-19"
 ```
 
 # Table: Top 10 countries (10–19), 2020
 
 ```{r table, echo=FALSE}
 tbl <- df |>
-  filter(age == ages, indicator == inc_name, year == 2020) |>
-  group_by(country_region) |>
-  summarise(incidence_2020 = mean(value, na.rm = TRUE), .groups = "drop") |>
-  arrange(desc(incidence_2020)) |>
-  slice_head(n = 10)
+filter(age == ages, indicator == inc_name, year == 2020) |>
+group_by(country_region) |>
+summarise(incidence_2020 = mean(value, na.rm = TRUE), .groups = "drop") |>
+arrange(desc(incidence_2020)) |>
+slice_head(n = 10)
 
-dir.create(here("output","tables"), recursive = TRUE, showWarnings = FALSE)
+# save for the repo
+
 readr::write_csv(tbl, here("output","tables","top10_adol_inc_2020.csv"))
 
 kable(tbl, caption = "Top 10 countries by adolescent (10–19) HIV incidence in 2020")
@@ -69,28 +86,27 @@ kable(tbl, caption = "Top 10 countries by adolescent (10–19) HIV incidence in 
 
 ```{r figure, echo=FALSE}
 trend <- df |>
-  filter(age == ages, indicator == inc_name) |>
-  group_by(year) |>
-  summarise(incidence = mean(value, na.rm = TRUE), .groups = "drop") |>
-  arrange(year)
+filter(age == ages, indicator == inc_name) |>
+group_by(year) |>
+summarise(incidence = mean(value, na.rm = TRUE), .groups = "drop") |>
+arrange(year)
 
-dir.create(here("output","figures"), recursive = TRUE, showWarnings = FALSE)
 p <- ggplot(trend, aes(year, incidence)) +
-  geom_line() + geom_point() +
-  labs(
-    title = "Global adolescent HIV incidence (10–19)",
-    x = "Year", y = "Incidence rate (per 1,000 uninfected)"
-  ) +
-  theme_minimal()
-ggsave(here("output","figures","global_adol_inc_trend.png"), p, width = 8, height = 5, dpi = 300)
+geom_line() + geom_point() +
+labs(title = "Global adolescent HIV incidence (10–19)",
+x = "Year", y = "Incidence per 1,000 uninfected") +
+theme_minimal()
+
+# save for the repo
+
+ggsave(here("output","figures","global_adol_inc_trend.png"), p, width=8, height=5, dpi=300)
 
 p
 ```
+
 # Notes
 - **Data source:** HIV_Epidemiology_Children_Adolescents_2021.xlsx  
 - **Indicator:** Estimated incidence rate (new HIV infection per 1,000 uninfected population)  
 - **Age group:** 10–19 years  
 - **Author:** Akanshya Dash  
 - **Date rendered:** `r Sys.Date()`
-
----
