@@ -27,7 +27,13 @@ This repo reproduces a small analysis using the UNAIDS HIV epidemiology indicato
 
 ## How to Reproduce
 
-### Option A — Make
-From the project root:
-```bash
-make all
+### 1. Restore the R package environment (renv)
+
+This project uses the `renv` package so that anyone can recreate the same R package versions.
+
+1. Clone this repository and open the RStudio project file `Final_Project_part4.Rproj`.
+2. In the R console, run (only needed the first time on a new computer):
+
+```r
+install.packages("renv")   # if renv is not already installed
+renv::restore()            # installs the packages listed in renv.lock

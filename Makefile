@@ -17,6 +17,13 @@ output/figures/global_adol_inc_trend.png: data/HIV_Epidemiology_Children_Adolesc
                                           code/01_setup.R code/03_make_figure.R
 	Rscript code/03_make_figure.R
 
+# -------------------------
+# NEW RULE FOR THIS ASSIGNMENT
+# -------------------------
+.PHONY: install
+install:
+	Rscript -e "renv::restore(prompt = FALSE)"
+
 .PHONY: clean
 clean:
 	rm -f output/tables/*.csv output/figures/*.png report/*.html
