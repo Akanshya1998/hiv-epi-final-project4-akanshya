@@ -1,29 +1,17 @@
-# Build everything by default
-all: report/report.html
+.PHONY: report clean
 
-# Final report depends on the figure, table, and Rmd
-report/report.html: output/figures/global_adol_inc_trend.png \
-                    output/tables/top10_adol_inc_2020.csv \
-                    report/final_report.Rmd
-	Rscript -e "rmarkdown::render('report/final_report.Rmd', output_file='report.html', output_dir='report')"
+# Detect OS for path handling
+ifeq ($(OS),Windows_NT)
+    # Windows with Git Bash requires extra /
+    PWD_PREFIX := /
+else
+    PWD_PREFIX :=
+endif
 
-# Table depends on the raw Excel + table code
-output/tables/top10_adol_inc_2020.csv: data/HIV_Epidemiology_Children_Adolescents_2021.xlsx \
-                                       code/01_setup.R code/02_make_table.R
-	Rscript code/02_make_table.R
+# Target to generate the report using Docker
+report:
+	docker run --rm -v "$(PWD_PREFIX)$$(pwd)/output":/project/output akanshya1998/hiv-report:latest
 
-# Figure depends on the raw Excel + figure code
-output/figures/global_adol_inc_trend.png: data/HIV_Epidemiology_Children_Adolescents_2021.xlsx \
-                                          code/01_setup.R code/03_make_figure.R
-	Rscript code/03_make_figure.R
-
-# -------------------------
-# NEW RULE FOR THIS ASSIGNMENT
-# -------------------------
-.PHONY: install
-install:
-	Rscript -e "renv::restore(prompt = FALSE)"
-
-.PHONY: clean
+# Clean output directory
 clean:
-	rm -f output/tables/*.csv output/figures/*.png report/*.html
+	rm -rf output/tables/* output/figures/* output/*.html
